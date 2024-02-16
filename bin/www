@@ -1,0 +1,90 @@
+const http = require('http');
+const chalk = require('chalk');
+
+const app = require('../app');
+const config = require('../config');
+
+const { Logger } = require('../loader');
+const { errorHandler } = require('../lib/handleError');
+
+const mongoose = require('mongoose');
+const uri =
+  'mongodb://inspectorAdmin:1088352389@127.0.0.1:27017/?authSource=inspectDB';
+
+/**
+ * Get port from environment and store in Express.
+ */
+const port = normalizePort(config.get('port'));
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+const server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+server.listen(config.get('port'), async () => {
+  await mongoose.connect(uri);
+});
+
+server.on('listening', () => {
+  Logger.info(
+    `${chalk.cyan('[EXPRESS]')}: listening on http://${config.get(
+      'ip'
+    )}:${config.get('port')}`
+  );
+});
+
+server.on('error', onError);
+
+errorHandler.listenToErrorEvents(server);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+  Logger.debug(`normalize port: ${val}`);
+
+  const port = parseInt(val, 10);
+
+  if (Number.isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof port === 'string' ? `Pipe ${port}` : `Port ${port}`;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      Logger.error('require access grant');
+      // eslint-disable-next-line no-process-exit
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      Logger.error(`${bind} is already in use`);
+      // eslint-disable-next-line no-process-exit
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
